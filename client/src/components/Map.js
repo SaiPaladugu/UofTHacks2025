@@ -42,7 +42,7 @@ const MyMap = () => {
     }, [])
 
     return (
-        <div style={{ width: '100vw', height: '100vh' }}>
+        <div style={{ width: '100vw', height: '100vh', position: 'absolute', top: 0, left: 0, zIndex: 0 }}>
             <div id='map-container' style={{ width: '100%', height: '100%' }} ref={mapContainerRef} />
 
         </div>
