@@ -20,12 +20,16 @@ const MyMap = forwardRef((props, ref) => {
     // Store the drawings as an array of { lat, lng, imageData }
     const [arDrawings, setArDrawings] = useState([]);
 
+    // To transform search results to map coordinates
+    const [heatmapData, setHeatmapData] = useState(null);
+
     // Keep track of current Marker objects so we can remove them
     const markersRef = useRef([]);
 
     // For the <video> element
     const videoRef = useRef(null);
 
+    
     // Expose handleToggleAR to parent components through ref
     useImperativeHandle(ref, () => ({
         handleToggleAR: async () => {
@@ -63,8 +67,48 @@ const MyMap = forwardRef((props, ref) => {
                     return drawingImageData;
                 }
             }
+        },
+        updateHeatmap: (searchResults) => {
+            console.log("updateHeatmap - searchResults:", searchResults);
+            const geoJSON = transformToGeoJSON(searchResults);
+            setHeatmapData(geoJSON);
         }
     }));
+
+    // Add function to transform search results
+    const transformToGeoJSON = (searchResults) => {
+        // Extract the results array from the response
+        const results = searchResults.results || [];
+        const payload = {
+            type: "FeatureCollection",
+            crs: { 
+                type: "name", 
+                properties: { 
+                    name: "urn:ogc:def:crs:OGC:1.3:CRS84" 
+                } 
+            },
+            features: results.map((result, index) => ({
+                type: "Feature",
+                properties: {
+                    id: result.scribbleId || `result${index}`,
+                    mag: 2.5,
+                    time: new Date(result.createdAt).getTime(),
+                    felt: null,
+                    tsunami: 0
+                },
+                geometry: {
+                    type: "Point",
+                    coordinates: [
+                        Number(result.coordinates.longitude),
+                        Number(result.coordinates.latitude),
+                        0.0
+                    ]
+                }
+            }))
+        };
+        console.log("payload", payload);
+        return payload;
+    };
 
     // 1. Initialize Mapbox
     useEffect(() => {
@@ -85,10 +129,11 @@ const MyMap = forwardRef((props, ref) => {
             projection: 'globe'
         });
     
+
         mapRef.current.on('load', () => {
             mapRef.current.addSource('earthquakes', {
                 type: 'geojson',
-                data: 'https://docs.mapbox.com/mapbox-gl-js/assets/earthquakes.geojson'
+                data: heatmapData
             });
         
             // Add heatmap layer
@@ -225,6 +270,14 @@ const MyMap = forwardRef((props, ref) => {
                 },
                 'waterway-label'
             );
+
+            // Add source update listener
+            if (mapRef.current && heatmapData) {
+                const source = mapRef.current.getSource('earthquakes');
+                if (source) {
+                    source.setData(heatmapData);
+                }
+            }
         });
         
     
@@ -233,7 +286,7 @@ const MyMap = forwardRef((props, ref) => {
                 mapRef.current.remove();
             }
         };
-    }, [isARActive]);
+    }, [isARActive, heatmapData]);
     
 
     // 2. Each time arDrawings changes, remove old markers, add new ones
