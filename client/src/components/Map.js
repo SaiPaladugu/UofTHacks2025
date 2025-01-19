@@ -29,65 +29,173 @@ const MyMap = () => {
     // 1. Initialize Mapbox
     // 1. Initialize Mapbox
     useEffect(() => {
-        mapboxgl.accessToken = 'pk.eyJ1Ijoic2FpcGFsYWR1Z3UiLCJhIjoiY202MmxmMTA4MTRnYTJqb3A3dGh1ajc0ayJ9.yct_mqWxLmGeEmr86O7ezA'
-
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2FpcGFsYWR1Z3UiLCJhIjoiY202MmxmMTA4MTRnYTJqb3A3dGh1ajc0ayJ9.yct_mqWxLmGeEmr86O7ezA';
+    
         if (isARActive) {
             return;
         }
-
-        const map = new mapboxgl.Map({
+    
+        mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
-            center: [-74.0060152, 40.7127281], // Default center
-            zoom: 29,
+            zoom: 16.8,
+            center: [24.951528, 60.169573],
             pitch: 74,
             bearing: 12.8,
             hash: true,
-            style: 'mapbox://styles/mapbox/standard',
-            projection: 'globe',
+            style: 'mapbox://styles/mapbox/streets-v11', // Use a valid Mapbox style
+            projection: 'globe'
         });
-
-        mapRef.current = map;
-
-        // Add a sample layer when style is loaded
-        map.on('style.load', () => {
-            // map.addSource('urban-areas', {
-            //     type: 'geojson',
-            //     data: 'https://docs.mapbox.com/mapbox-gl-js/assets/ne_50m_urban_areas.geojson',
-            // });
-
-            map.addSource('urban-areas', {
+    
+        mapRef.current.on('load', () => {
+            mapRef.current.addSource('earthquakes', {
                 type: 'geojson',
-                data: 'https://docs.mapbox.com/mapbox-gl-js/assets/ne_50m_urban_areas.geojson'
+                data: 'https://docs.mapbox.com/mapbox-gl-js/assets/earthquakes.geojson'
             });
-
-            map.addLayer({
-                id: 'urban-areas-fill',
-                type: 'fill',
-                source: 'urban-areas',
-                layout: {},
-                paint: {
-                    'fill-color': '#f08',
-                    'fill-opacity': 0.4,
+        
+            // Add heatmap layer
+            mapRef.current.addLayer(
+                {
+                    id: 'earthquakes-heat',
+                    type: 'heatmap',
+                    source: 'earthquakes',
+                    maxzoom: 9,
+                    paint: {
+                        'heatmap-weight': [
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'mag'],
+                            0,
+                            0,
+                            6,
+                            1
+                        ],
+                        'heatmap-intensity': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            0,
+                            1,
+                            9,
+                            3
+                        ],
+                        'heatmap-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['heatmap-density'],
+                            0,
+                            'rgba(33,102,172,0)',
+                            0.2,
+                            'rgb(103,169,207)',
+                            0.4,
+                            'rgb(209,229,240)',
+                            0.6,
+                            'rgb(253,219,199)',
+                            0.8,
+                            'rgb(239,138,98)',
+                            1,
+                            'rgb(178,24,43)'
+                        ],
+                        'heatmap-radius': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            0,
+                            2,
+                            9,
+                            20
+                        ],
+                        'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 1, 9, 0]
+                    }
                 },
-            });
-
-            // Zoom into the user's location if available
-            if (userLocation) {
-                map.flyTo({
-                    center: [userLocation.lng, userLocation.lat],
-                    zoom: 14, // Adjust zoom level as needed
-                    essential: true // This animation is considered essential with respect to prefers-reduced-motion
-                });
-            }
+                'waterway-label'
+            );
+        
+            // Add point layer
+            mapRef.current.addLayer(
+                {
+                    id: 'earthquakes-point',
+                    type: 'circle',
+                    source: 'earthquakes',
+                    minzoom: 7,
+                    paint: {
+                        'circle-radius': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            7,
+                            ['interpolate', ['linear'], ['get', 'mag'], 1, 1, 6, 4],
+                            16,
+                            ['interpolate', ['linear'], ['get', 'mag'], 1, 5, 6, 50]
+                        ],
+                        'circle-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'mag'],
+                            1,
+                            'rgba(33,102,172,0)',
+                            2,
+                            'rgb(103,169,207)',
+                            3,
+                            'rgb(209,229,240)',
+                            4,
+                            'rgb(253,219,199)',
+                            5,
+                            'rgb(239,138,98)',
+                            6,
+                            'rgb(178,24,43)'
+                        ],
+                        'circle-stroke-color': 'white',
+                        'circle-stroke-width': 1,
+                        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0, 8, 1]
+                    }
+                },
+                'waterway-label'
+            );
+        
+            // Add 3D buildings
+            mapRef.current.addLayer(
+                {
+                    id: '3d-buildings',
+                    source: 'composite',
+                    'source-layer': 'building',
+                    filter: ['==', 'extrude', 'true'],
+                    type: 'fill-extrusion',
+                    minzoom: 15,
+                    paint: {
+                        'fill-extrusion-color': '#aaa',
+                        'fill-extrusion-height': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15,
+                            0,
+                            16.05,
+                            ['get', 'height']
+                        ],
+                        'fill-extrusion-base': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15,
+                            0,
+                            16.05,
+                            ['get', 'min_height']
+                        ],
+                        'fill-extrusion-opacity': 0.6
+                    }
+                },
+                'waterway-label'
+            );
         });
-
-        // Cleanup on unmount
+        
+    
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove();
             }
         };
-    }, [isARActive, userLocation]); // Add userLocation as a dependency
+    }, [isARActive]);
+    
 
     // 2. Each time arDrawings changes, remove old markers, add new ones
     useEffect(() => {
@@ -181,56 +289,75 @@ const MyMap = () => {
     };
 
     // 7. Toggles AR on/off
-    const handleToggleAR = async () => {
-        if (!isARActive) {
-            // Request camera + geolocation
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' },
-                });
-                setVideoStream(stream);
-
-                // Get location
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const location = {
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude,
-                        };
-                        setUserLocation(location);
-                        console.log('User Location:', location); // Print the location to the console
-                    },
-                    (err) => console.error('Error getting location:', err),
-                    { enableHighAccuracy: true }
-                );
-
-                // Switch to AR mode
-                setIsARActive(true);
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-            }
-        } else {
-            // Exiting AR mode: capture drawing & add it to arDrawings
-            const drawingImageData = saveDrawingImage();
-            if (drawingImageData && userLocation) {
-                setArDrawings((prev) => [
-                    ...prev,
-                    {
-                        lat: userLocation.lat,
-                        lng: userLocation.lng,
-                        imageData: drawingImageData,
-                    },
-                ]);
-            }
-
-            // Turn AR off: stop video tracks
-            if (videoStream) {
-                videoStream.getTracks().forEach((track) => track.stop());
-            }
-            setVideoStream(null);
-            setIsARActive(false);
-        }
-    };
+  const handleToggleAR = async () => {
+      if (!isARActive) {
+          // Check for camera permission
+          try {
+              const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+              
+              if (permissionStatus.state === 'granted') {
+                  // Permission is already granted, proceed to get the video stream
+                  await startCamera();
+              } else if (permissionStatus.state === 'prompt') {
+                  // Request camera access
+                  await startCamera();
+              } else {
+                  console.error('Camera permission denied');
+              }
+          } catch (error) {
+              console.error('Error checking camera permissions:', error);
+          }
+      } else {
+          // Exiting AR mode: capture drawing & add it to arDrawings
+          const drawingImageData = saveDrawingImage();
+          if (drawingImageData && userLocation) {
+              setArDrawings((prev) => [
+                  ...prev,
+                  {
+                      lat: userLocation.lat,
+                      lng: userLocation.lng,
+                      imageData: drawingImageData,
+                  },
+              ]);
+          }
+  
+          // Turn AR off: stop video tracks
+          if (videoStream) {
+              videoStream.getTracks().forEach((track) => track.stop());
+          }
+          setVideoStream(null);
+          setIsARActive(false);
+      }
+  };
+  
+  // Helper function to start the camera
+  const startCamera = async () => {
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'environment' },
+          });
+          setVideoStream(stream);
+  
+          // Get location
+          navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                  const location = {
+                      lat: pos.coords.latitude,
+                      lng: pos.coords.longitude,
+                  };
+                  setUserLocation(location);
+                  console.log('User Location:', location); // Print the location to the console
+              },
+              (err) => console.error('Error getting location:', err),
+              { enableHighAccuracy: true }
+          );
+  
+          // Switch to AR mode
+          setIsARActive(true);
+      } catch (error) {
+          console.error('Error accessing camera:', error);
+      }
+  };
 
     // 8. Render
     return (
@@ -305,7 +432,7 @@ const MyMap = () => {
                         onClick={handleToggleAR}
                         style={{
                             position: 'absolute',
-                            bottom: '20px',
+                            bottom: '100px',
                             right: '20px',
                             zIndex: 999,
                             padding: '10px 15px',
