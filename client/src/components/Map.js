@@ -395,7 +395,6 @@ const MyMap = () => {
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}
                     />
-
                     {/* Button to stop AR */}
                     <button
                         onClick={handleToggleAR}

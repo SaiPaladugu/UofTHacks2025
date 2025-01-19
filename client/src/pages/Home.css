@@ -1,0 +1,30 @@
+.home-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.search-badge-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 20px;
+    max-width: 400px;
+}
+
+.search-container {
+    width: 100%;
+    background: transparent;
+}
+
+.badge-container {
+    width: 300px;
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 10px;
+}
