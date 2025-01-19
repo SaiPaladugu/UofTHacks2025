@@ -1,4 +1,4 @@
-import react, { useState } from "react";
+import react, { useState, useRef } from "react";
 import MyMap from "../components/Map";
 import MySearch from "../components/Search";
 import Badge from "../components/Badge";
@@ -9,6 +9,8 @@ import "./Home.css";
 const Home = () => {
 
     const [keywords, setKeywords] = useState([]);
+    const [drawingData, setDrawingData] = useState(null);
+    const mapRef = useRef();
 
     const handleSearch = async (query) => {
 
@@ -22,6 +24,13 @@ const Home = () => {
         //     console.error("Error fetching keywords:", error);
         //     setKeywords([]); // Clear keywords on error
         // }
+    };
+
+    const handleStartAR = () => {
+        console.log("start AR");
+        if (mapRef.current && mapRef.current.handleToggleAR) {
+            mapRef.current.handleToggleAR();
+        }
     };
 
 
@@ -38,9 +47,17 @@ const Home = () => {
                 )}
          
             </div>
-            <AddScribble />
-            <MyMap />
             
+            <AddScribble onStartAR={handleStartAR} drawingData={drawingData} />
+            <MyMap 
+                ref={mapRef} 
+                onARComplete={(drawing) => {
+                    if (drawing) {
+                        console.log("Setting drawing data from AR complete");
+                        setDrawingData(drawing);
+                    }
+                }} 
+            />
         </div>
     )
 }

@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const MyMap = () => {
+const MyMap = forwardRef((props, ref) => {
     // Refs for Mapbox
     const mapRef = useRef(null);
     const mapContainerRef = useRef(null);
@@ -26,7 +26,46 @@ const MyMap = () => {
     // For the <video> element
     const videoRef = useRef(null);
 
-    // 1. Initialize Mapbox
+    // Expose handleToggleAR to parent components through ref
+    useImperativeHandle(ref, () => ({
+        handleToggleAR: async () => {
+            if (!isARActive) {
+                // Starting AR mode
+                try {
+                    await startCamera();
+                    return null;
+                } catch (error) {
+                    console.error('Error starting AR:', error);
+                    return null;
+                }
+            } else {
+                // Stopping AR mode
+                const drawingImageData = saveDrawingImage();
+                if (drawingImageData && userLocation) {
+                    setArDrawings((prev) => [
+                        ...prev,
+                        {
+                            lat: userLocation.lat,
+                            lng: userLocation.lng,
+                            imageData: drawingImageData,
+                        },
+                    ]);
+
+                    // Stop video tracks
+                    if (videoStream) {
+                        videoStream.getTracks().forEach((track) => track.stop());
+                    }
+                    setVideoStream(null);
+                    setIsARActive(false);
+                    
+                    // Immediately call the callback with the drawing data
+                    props.onARComplete?.(drawingImageData);
+                    return drawingImageData;
+                }
+            }
+        }
+    }));
+
     // 1. Initialize Mapbox
     useEffect(() => {
         mapboxgl.accessToken = 'pk.eyJ1Ijoic2FpcGFsYWR1Z3UiLCJhIjoiY202MmxmMTA4MTRnYTJqb3A3dGh1ajc0ayJ9.yct_mqWxLmGeEmr86O7ezA';
@@ -241,6 +280,7 @@ const MyMap = () => {
 
     // 4. Setup the AR canvas context once it's rendered
     useEffect(() => {
+        console.log("canvas ref");
         if (!canvasRef.current || !isARActive) return;
 
         const canvas = canvasRef.current;
@@ -266,6 +306,7 @@ const MyMap = () => {
 
     // 5. Mouse events for drawing on the canvas
     const handleMouseDown = (e) => {
+        console.log("mouse down");
         if (!ctx) return;
         setIsDrawing(true);
         ctx.beginPath();
@@ -273,12 +314,14 @@ const MyMap = () => {
     };
 
     const handleMouseMove = (e) => {
+        console.log("mouse move");
         if (!isDrawing || !ctx) return;
         ctx.lineTo(e.clientX, e.clientY);
         ctx.stroke();
     };
 
     const handleMouseUp = () => {
+        console.log("mouse up");
         setIsDrawing(false);
     };
 
@@ -289,75 +332,80 @@ const MyMap = () => {
     };
 
     // 7. Toggles AR on/off
-  const handleToggleAR = async () => {
-      if (!isARActive) {
-          // Check for camera permission
-          try {
-              const permissionStatus = await navigator.permissions.query({ name: 'camera' });
-              
-              if (permissionStatus.state === 'granted') {
-                  // Permission is already granted, proceed to get the video stream
-                  await startCamera();
-              } else if (permissionStatus.state === 'prompt') {
-                  // Request camera access
-                  await startCamera();
-              } else {
-                  console.error('Camera permission denied');
-              }
-          } catch (error) {
-              console.error('Error checking camera permissions:', error);
-          }
-      } else {
-          // Exiting AR mode: capture drawing & add it to arDrawings
-          const drawingImageData = saveDrawingImage();
-          if (drawingImageData && userLocation) {
-              setArDrawings((prev) => [
-                  ...prev,
-                  {
-                      lat: userLocation.lat,
-                      lng: userLocation.lng,
-                      imageData: drawingImageData,
-                  },
-              ]);
-          }
-  
-          // Turn AR off: stop video tracks
-          if (videoStream) {
-              videoStream.getTracks().forEach((track) => track.stop());
-          }
-          setVideoStream(null);
-          setIsARActive(false);
-      }
-  };
-  
-  // Helper function to start the camera
-  const startCamera = async () => {
-      try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: 'environment' },
-          });
-          setVideoStream(stream);
-  
-          // Get location
-          navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                  const location = {
-                      lat: pos.coords.latitude,
-                      lng: pos.coords.longitude,
-                  };
-                  setUserLocation(location);
-                  console.log('User Location:', location); // Print the location to the console
-              },
-              (err) => console.error('Error getting location:', err),
-              { enableHighAccuracy: true }
-          );
-  
-          // Switch to AR mode
-          setIsARActive(true);
-      } catch (error) {
-          console.error('Error accessing camera:', error);
-      }
-  };
+    const handleToggleAR = async () => {
+        if (!isARActive) {
+            // Check for camera permission
+            try {
+                const permissionStatus = await navigator.permissions.query({ name: 'camera' });
+                
+                if (permissionStatus.state === 'granted') {
+                    // Permission is already granted, proceed to get the video stream
+                    await startCamera();
+                } else if (permissionStatus.state === 'prompt') {
+                    // Request camera access
+                    await startCamera();
+                } else {
+                    console.error('Camera permission denied');
+                }
+            } catch (error) {
+                console.error('Error checking camera permissions:', error);
+            }
+        } else {
+            // Exiting AR mode: capture drawing & add it to arDrawings
+            console.log("Exiting AR mode");
+            const drawingImageData = saveDrawingImage();
+            if (drawingImageData && userLocation) {
+                setArDrawings((prev) => [
+                    ...prev,
+                    {
+                        lat: userLocation.lat,
+                        lng: userLocation.lng,
+                        imageData: drawingImageData,
+                    },
+                ]);
+            }
+    
+            // Turn AR off: stop video tracks
+            if (videoStream) {
+                videoStream.getTracks().forEach((track) => track.stop());
+            }
+            setVideoStream(null);
+            setIsARActive(false);
+            
+            // Return the drawing data URL directly
+            console.log("Returning drawing data URL:", drawingImageData);
+            return drawingImageData;
+        }
+    };
+    
+    // Helper function to start the camera
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' },
+            });
+            setVideoStream(stream);
+    
+            // Get location
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const location = {
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                    };
+                    setUserLocation(location);
+                    console.log('User Location:', location); // Print the location to the console
+                },
+                (err) => console.error('Error getting location:', err),
+                { enableHighAccuracy: true }
+            );
+    
+            // Switch to AR mode
+            setIsARActive(true);
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+        }
+    };
 
     // 8. Render
     return (
@@ -396,7 +444,7 @@ const MyMap = () => {
                         onMouseUp={handleMouseUp}
                     />
                     {/* Button to stop AR */}
-                    <button
+                    {/* <button
                         onClick={handleToggleAR}
                         style={{
                             position: 'absolute',
@@ -409,7 +457,7 @@ const MyMap = () => {
                         }}
                     >
                         Stop AR
-                    </button>
+                    </button> */}
                 </>
             ) : (
                 // ---- Map Mode ----
@@ -426,7 +474,7 @@ const MyMap = () => {
                             zIndex: 1,
                         }}
                     />
-                    {/* Button to start AR */}
+                    {/* Button to start AR
                     <button
                         onClick={handleToggleAR}
                         style={{
@@ -440,11 +488,11 @@ const MyMap = () => {
                         }}
                     >
                         Start AR
-                    </button>
+                    </button> */}
                 </>
             )}
         </div>
     );
-};
+});
 
 export default MyMap;
