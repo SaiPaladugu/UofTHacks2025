@@ -12,7 +12,11 @@ const Home = () => {
     const [drawingData, setDrawingData] = useState(null);
     const mapRef = useRef();
 
-    const handleSearch = async (query) => {
+    const handleSearch = async (searchResults) => {
+        console.log("Search Results received:", searchResults);
+        mapRef.current.updateHeatmap(searchResults);
+        console.log("handleSearch - Heatmap updated");
+        //setKeywords(searchResults.results || []); 
 
         setKeywords(sampleBadges.badges);
         // try {

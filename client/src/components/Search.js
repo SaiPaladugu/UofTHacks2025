@@ -4,18 +4,63 @@ function MySearch({ onSearch }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [query, setQuery] = useState("");
 
-    const handleSearchClick = () => {
+    const handleSearchClick = async () => {
+        const newExpandedState = !isExpanded;
         setIsExpanded((prev) => !prev);
+        
+        // If we're closing the search
+        if (!newExpandedState) {
+            setQuery(""); // Clear the query
+            try {
+                
+                const response = await fetch('http://100.67.210.153:5000/scribble/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Reset request failed');
+                }
+                console.log("resetting");
+                onSearch([]); // Reset the badges by passing empty array
+            } catch (error) {
+                console.error('Reset error:', error);
+            }
+        }
+        
     };
     
     const handleInputChange = (e) => {
         setQuery(e.target.value);
     };
     
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        console.log(query.trim());
         if (query.trim()) {
-            console.log(query);
-            onSearch(query);
+            try {
+                const payload = {query: query.trim()}
+                console.log(payload);
+                const response = await fetch('http://100.67.210.153:5000/scribble/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Search request failed');
+                }
+                
+                const data = await response.json();
+                onSearch(data); // This will update the heatmap through the parent component
+
+            } catch (error) {
+                console.error('Search error:', error);
+            }
+            
             setQuery("");
             setIsExpanded(false);
         }
