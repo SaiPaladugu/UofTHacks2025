@@ -1,4 +1,5 @@
 # Scribble - Graffiti Scribbles in AR
+(Winner, UofTHacks 12 2025) https://dorahacks.io/hackathon/uofthacks/winner
 
 <img width="1512" alt="readme" src="https://github.com/user-attachments/assets/7e86b962-2ccd-44f4-a85d-ce01e4ebde6a" />
 
