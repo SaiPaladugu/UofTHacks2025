@@ -443,8 +443,8 @@ const MyMap = forwardRef((props, ref) => {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const location = {
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
+                        lat: 43.6422,
+                        lng: -79.3866
                     };
                     setUserLocation(location);
                     console.log('User Location:', location); // Print the location to the console

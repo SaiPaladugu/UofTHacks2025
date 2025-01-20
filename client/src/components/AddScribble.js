@@ -39,24 +39,24 @@ const AddScribble = ({ onStartAR, drawingData }) => {
                 text: newPost.text,
                 imageUrl: newPost.drawingData,
                 coordinates: {
-                    latitude: null,
-                    longitude: null
+                    latitude: 43.6438,
+                    longitude: -79.3867
                 }
             };
 
             // Get current position
-            if ("geolocation" in navigator) {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                });
+            // if ("geolocation" in navigator) {
+            //     const position = await new Promise((resolve, reject) => {
+            //         navigator.geolocation.getCurrentPosition(resolve, reject);
+            //     });
 
-                payload.coordinates.latitude = position.coords.latitude;
-                payload.coordinates.longitude = position.coords.longitude;
-            }
+            //     // payload.coordinates.latitude = position.coords.latitude;
+            //     // payload.coordinates.longitude = position.coords.longitude;
+            // }
 
             console.log("payload", payload);
             
-            const response = await fetch('http://100.67.210.153:5000/scribble/upload', {
+            const response = await fetch('http://192.168.86.26:5000/scribble/upload', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
